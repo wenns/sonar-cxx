@@ -1,0 +1,96 @@
+/*
+ * Sonar C++ Plugin (Community)
+ * Copyright (C) 2010-2018 SonarOpenCommunity
+ * http://github.com/SonarOpenCommunity/sonar-cxx
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+package org.sonar.cxx.sensors.visitors;
+
+import java.util.Map;
+import java.util.Set;
+
+import javax.annotation.Nullable;
+
+import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.sensor.SensorContext;
+import org.sonar.api.batch.sensor.symbol.NewSymbol;
+import org.sonar.api.batch.sensor.symbol.NewSymbolTable;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.Loggers;
+import org.sonar.cxx.sensors.eclipsecdt.EclipseCDTException;
+import org.sonar.cxx.sensors.eclipsecdt.EclipseCDTParser;
+import org.sonar.cxx.sensors.eclipsecdt.LinebasedTextRange;
+import org.sonar.cxx.sensors.utils.CxxUtils;
+import org.sonar.squidbridge.SquidAstVisitor;
+
+import com.sonar.sslr.api.AstAndTokenVisitor;
+import com.sonar.sslr.api.AstNode;
+import com.sonar.sslr.api.Grammar;
+import com.sonar.sslr.api.Token;
+
+public class CxxEclipseCDTVisitor extends SquidAstVisitor<Grammar> implements AstAndTokenVisitor {
+
+  private static final Logger LOG = Loggers.get(CxxEclipseCDTVisitor.class);
+
+  private final SensorContext context;
+
+  public CxxEclipseCDTVisitor(SensorContext context) {
+    this.context = context;
+  }
+
+  @Override
+  public void visitFile(@Nullable AstNode astNode) {
+    InputFile inputFile = context.fileSystem()
+        .inputFile(context.fileSystem().predicates().is(getContext().getFile().getAbsoluteFile()));
+
+    if (inputFile == null) {
+      LOG.warn("Unable to locate the source file " + getContext().getFile().getAbsoluteFile().getAbsolutePath());
+    }
+
+    try {
+
+      EclipseCDTParser parser = new EclipseCDTParser(inputFile.uri().getPath());
+
+      Map<LinebasedTextRange, Set<LinebasedTextRange>> table = parser.generateSymbolTable();
+
+      NewSymbolTable newSymbolTable = context.newSymbolTable();
+      newSymbolTable.onFile(inputFile);
+      for (Map.Entry<LinebasedTextRange, Set<LinebasedTextRange>> entry : table.entrySet()) {
+        LinebasedTextRange declaration = entry.getKey();
+        Set<LinebasedTextRange> references = entry.getValue();
+
+        NewSymbol declarationSymbol = newSymbolTable.newSymbol(declaration.start().line(),
+            declaration.start().lineOffset(), declaration.end().line(), declaration.end().lineOffset());
+        for (LinebasedTextRange reference : references) {
+          declarationSymbol.newReference(reference.start().line(), reference.start().lineOffset(),
+              reference.end().line(), reference.end().lineOffset());
+        }
+      }
+
+      newSymbolTable.save();
+
+    } catch (EclipseCDTException e) {
+      LOG.warn("EclipseCDT failure:" + CxxUtils.getStackTrace(e));
+    } catch (Exception e) {
+      LOG.warn("Generic exception:" + CxxUtils.getStackTrace(e));
+    }
+  }
+
+  @Override
+  public void visitToken(Token token) {
+  }
+
+}

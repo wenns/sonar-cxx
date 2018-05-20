@@ -53,6 +53,7 @@ import org.sonar.cxx.sensors.utils.CxxMetrics;
 import org.sonar.cxx.sensors.utils.CxxReportSensor;
 import org.sonar.cxx.sensors.utils.JsonCompilationDatabase;
 import org.sonar.cxx.sensors.visitors.CxxCpdVisitor;
+import org.sonar.cxx.sensors.visitors.CxxEclipseCDTVisitor;
 import org.sonar.cxx.sensors.visitors.CxxFileLinesVisitor;
 import org.sonar.cxx.sensors.visitors.CxxHighlighterVisitor;
 import org.sonar.squidbridge.AstScanner;
@@ -132,6 +133,7 @@ public class CxxSquidSensor implements Sensor {
 
     List<SquidAstVisitor<Grammar>> visitors = new ArrayList<>((Collection) checks.all());
     visitors.add(new CxxHighlighterVisitor(context));
+    visitors.add(new CxxEclipseCDTVisitor(context));
     visitors.add(new CxxFileLinesVisitor(language, fileLinesContextFactory, context, linesOfCodeByFile));
 
     visitors.add(
