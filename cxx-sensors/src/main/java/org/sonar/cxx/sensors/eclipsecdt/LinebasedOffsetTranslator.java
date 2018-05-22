@@ -27,9 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.sonar.api.batch.fs.TextPointer;
-import org.sonar.api.batch.fs.internal.DefaultInputFile;
-
 /**
  * Eclipse CDT operates with absolute offsets in order to address tokens in the
  * source file. We use binary search over the line offsets for the conversion to

@@ -1,9 +1,40 @@
-#include "symbols.hh"
-// this include must be resolved in one of specified include directories
+// MotorController.h
+
+enum Direction
+{
+  Forward, Reverse
+};
+
+enum Velocity
+{
+  Accelerate, Decelerate
+};
+
+static int global1 = 0;
+
+// This class is exported from the MotorController.dll
+class CMotorController
+{
+private:
+  int speed;
+  Direction direction;
+  bool limiter;
+  Velocity velocity;
+
+public:
+  CMotorController( void );
+
+  void setSpeed( int speed );
+  int getSpeed();
+  void checkSpeed();
+  bool getLimiter();
+  Velocity getVelocity();
+
+  void setDirection( Direction direction );
+  Direction getDirection();
+};
 
 // MotorController.cpp : Defines the exported functions for the DLL application.
-
-int global1 = 0;
 
 constexpr int factorial( int n )
 {

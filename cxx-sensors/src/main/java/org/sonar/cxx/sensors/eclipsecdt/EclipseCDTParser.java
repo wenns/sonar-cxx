@@ -19,13 +19,15 @@
  */
 package org.sonar.cxx.sensors.eclipsecdt;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.cdt.core.dom.ast.ASTGenericVisitor;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
@@ -35,11 +37,16 @@ import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.index.IIndex;
+import org.eclipse.cdt.core.index.IIndexFileLocation;
 import org.eclipse.cdt.core.parser.FileContent;
 import org.eclipse.cdt.core.parser.IParserLogService;
 import org.eclipse.cdt.core.parser.IScannerInfo;
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider;
 import org.eclipse.cdt.core.parser.ScannerInfo;
+import org.eclipse.cdt.core.parser.util.CharArrayUtils;
+import org.eclipse.cdt.internal.core.parser.IMacroDictionary;
+import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent;
+import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider;
 import org.eclipse.core.runtime.CoreException;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
@@ -47,6 +54,39 @@ import org.sonar.api.utils.log.Loggers;
 public class EclipseCDTParser {
 
   private static final Logger LOG = Loggers.get(EclipseCDTParser.class);
+
+  /**
+   * Naive implementation for IncludeFileContentProvider, see
+   * {@link org.eclipse.cdt.internal.core.parser.EmptyFilesProvider}
+   *
+   * InernalFile is a source file from the eclipse workspace. Usage of
+   * FileContent.createForExternalFileLocation() seems to be inappropropriate.
+   */
+  private static final IncludeFileContentProvider INCLUDE_FILE_PROVIDER = new InternalFileContentProvider() {
+    private InternalFileContent getContentUncached(String path) {
+      if (!getInclusionExists(path)) {
+        return null;
+      }
+
+      char[] contents = CharArrayUtils.EMPTY;
+      try {
+        contents = FileUtils.readFileToString(new File(path), Charset.defaultCharset()).toCharArray();
+      } catch (IOException e) {
+        LOG.debug("EclipseCDTParser: Unable to read the content of {}", path);
+      }
+      return (InternalFileContent) FileContent.create(path, contents);
+    }
+
+    @Override
+    public InternalFileContent getContentForInclusion(String path, IMacroDictionary macroDictionary) {
+      return getContentUncached(path);
+    }
+
+    @Override
+    public InternalFileContent getContentForInclusion(IIndexFileLocation ifl, String astPath) {
+      return getContentUncached(astPath);
+    }
+  };
 
   private static final IParserLogService LOG_ADAPTER = new IParserLogService() {
     @Override
@@ -60,10 +100,12 @@ public class EclipseCDTParser {
     }
   };
 
+  private final String sourcePath;
   private final IASTTranslationUnit translationUnit;
   private final LinebasedOffsetTranslator offsetTranslator;
 
-  public EclipseCDTParser(String path) throws EclipseCDTException {
+  public EclipseCDTParser(String path, String[] includePaths) throws EclipseCDTException {
+    sourcePath = path;
     try {
       offsetTranslator = new LinebasedOffsetTranslator(path);
     } catch (IOException e) {
@@ -71,17 +113,14 @@ public class EclipseCDTParser {
     }
 
     final IIndex ignoreIndex = null;
-    final String[] ignoreIncludePaths = null;
     final Map<String, String> ignoreDefinedMacros = null;
     final int noSpecialParseOptions = 0;
-    IScannerInfo ignoreScannerInfo = new ScannerInfo(ignoreDefinedMacros, ignoreIncludePaths);
-    IncludeFileContentProvider emptyFilesProvider = IncludeFileContentProvider.getEmptyFilesProvider();
-
+    IScannerInfo scannerInfo = new ScannerInfo(ignoreDefinedMacros, includePaths);
     FileContent fileContent = FileContent.createForExternalFileLocation(path);
 
     try {
-      translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent, ignoreScannerInfo,
-          emptyFilesProvider, ignoreIndex, noSpecialParseOptions, LOG_ADAPTER);
+      translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent, scannerInfo, INCLUDE_FILE_PROVIDER,
+          ignoreIndex, noSpecialParseOptions, LOG_ADAPTER);
     } catch (CoreException e) {
       throw new EclipseCDTException("Unable to parse file " + path, e);
     }
@@ -102,10 +141,6 @@ public class EclipseCDTParser {
    * describe this or arbitrary nested declaration
    */
   private Set<IASTName> getDeclarationNameNodes(IASTDeclaration declaration) {
-    if (!declaration.isPartOfTranslationUnitFile()) {
-      return Collections.emptySet();
-    }
-
     final Set<IASTName> declarationNameNodes = new HashSet<>();
     declaration.accept(new ASTGenericVisitor(true) {
       {
@@ -114,7 +149,7 @@ public class EclipseCDTParser {
 
       @Override
       public int visit(IASTName name) {
-        if (name.isDeclaration() && name.isPartOfTranslationUnitFile() && name.getFileLocation() != null) {
+        if (name.isDeclaration() && name.getFileLocation() != null && name.getFileLocation().getNodeLength() > 0) {
           declarationNameNodes.add(name);
         }
         return PROCESS_CONTINUE;
@@ -133,8 +168,16 @@ public class EclipseCDTParser {
     return new LinebasedTextRange(start, end);
   }
 
+  private Boolean isLocatedInFile(IASTName name) {
+    if (name == null || !name.isPartOfTranslationUnitFile()) {
+      return false;
+    }
+    IASTFileLocation fileLocation = name.getFileLocation();
+    return fileLocation != null && sourcePath.equals(fileLocation.getFileName()) && fileLocation.getNodeLength() > 0;
+  }
+
   public Map<LinebasedTextRange, Set<LinebasedTextRange>> generateSymbolTable() throws EclipseCDTException {
-    // collect all declarations from te translation unit
+    // collect all declarations from the translation unit
     IASTDeclaration[] declarations = translationUnit.getDeclarations(true);
     final Set<IASTName> declarationNames = new HashSet<>();
     for (IASTDeclaration declaration : declarations) {
@@ -154,14 +197,22 @@ public class EclipseCDTParser {
 
       Set<LinebasedTextRange> references = new HashSet<>();
       for (IASTName referenceName : translationUnit.getReferences(binding)) {
-        if (referenceName != null && referenceName.isPartOfTranslationUnitFile()
-            && referenceName.getFileLocation() != null) {
+        if (referenceName != null && isLocatedInFile(referenceName)) {
           IASTFileLocation referenceRange = referenceName.getFileLocation();
           references.add(newRange(referenceRange));
         }
       }
 
-      table.put(declarationTextRange, references);
+      if (isLocatedInFile(declarationName)) {
+        table.put(declarationTextRange, references);
+      } else if (!references.isEmpty()) {
+        LinebasedTextRange randomReference = references.iterator().next();
+        references.remove(randomReference);
+        table.put(randomReference, references);
+      } else {
+        continue;
+      }
+
     }
     return table;
   }

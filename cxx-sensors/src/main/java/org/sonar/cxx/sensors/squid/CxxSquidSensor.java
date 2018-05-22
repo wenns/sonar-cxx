@@ -131,9 +131,10 @@ public class CxxSquidSensor implements Sensor {
   public void execute(SensorContext context) {
     Map<InputFile, Set<Integer>> linesOfCodeByFile = new HashMap<>();
 
+    CxxConfiguration cxxConf = createConfiguration(context.fileSystem(), context);
     List<SquidAstVisitor<Grammar>> visitors = new ArrayList<>((Collection) checks.all());
     visitors.add(new CxxHighlighterVisitor(context));
-    visitors.add(new CxxEclipseCDTVisitor(context));
+    visitors.add(new CxxEclipseCDTVisitor(context, cxxConf));
     visitors.add(new CxxFileLinesVisitor(language, fileLinesContextFactory, context, linesOfCodeByFile));
 
     visitors.add(
@@ -142,7 +143,6 @@ public class CxxSquidSensor implements Sensor {
         this.language.getBooleanOption(CPD_IGNORE_LITERALS_KEY).orElse(Boolean.FALSE),
         this.language.getBooleanOption(CPD_IGNORE_IDENTIFIERS_KEY).orElse(Boolean.FALSE)));
 
-    CxxConfiguration cxxConf = createConfiguration(context.fileSystem(), context);
     AstScanner<Grammar> scanner = CxxAstScanner.create(this.language, cxxConf,
       visitors.toArray(new SquidAstVisitor[visitors.size()]));
 

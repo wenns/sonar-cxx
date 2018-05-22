@@ -19,6 +19,7 @@
  */
 package org.sonar.cxx.sensors.visitors;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,6 +31,8 @@ import org.sonar.api.batch.sensor.symbol.NewSymbol;
 import org.sonar.api.batch.sensor.symbol.NewSymbolTable;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
+import org.sonar.cxx.CxxCompilationUnitSettings;
+import org.sonar.cxx.CxxConfiguration;
 import org.sonar.cxx.sensors.eclipsecdt.EclipseCDTException;
 import org.sonar.cxx.sensors.eclipsecdt.EclipseCDTParser;
 import org.sonar.cxx.sensors.eclipsecdt.LinebasedTextRange;
@@ -46,9 +49,21 @@ public class CxxEclipseCDTVisitor extends SquidAstVisitor<Grammar> implements As
   private static final Logger LOG = Loggers.get(CxxEclipseCDTVisitor.class);
 
   private final SensorContext context;
+  private final CxxConfiguration configuration;
 
-  public CxxEclipseCDTVisitor(SensorContext context) {
+  public CxxEclipseCDTVisitor(SensorContext context, CxxConfiguration cxxConfiguration) {
+    this.configuration = cxxConfiguration;
     this.context = context;
+  }
+
+  private String[] getIncludePaths(String compilationUnit) {
+    CxxCompilationUnitSettings cus = configuration.getCompilationUnitSettings(compilationUnit);
+    if (cus != null) {
+      List<String> includes = cus.getIncludes();
+      return cus.getIncludes().toArray(new String[includes.size()]);
+    } else {
+      return new String[0];
+    }
   }
 
   @Override
@@ -61,8 +76,8 @@ public class CxxEclipseCDTVisitor extends SquidAstVisitor<Grammar> implements As
     }
 
     try {
-
-      EclipseCDTParser parser = new EclipseCDTParser(inputFile.uri().getPath());
+      String path = inputFile.uri().getPath();
+      EclipseCDTParser parser = new EclipseCDTParser(path, getIncludePaths(path));
 
       Map<LinebasedTextRange, Set<LinebasedTextRange>> table = parser.generateSymbolTable();
 
@@ -75,17 +90,21 @@ public class CxxEclipseCDTVisitor extends SquidAstVisitor<Grammar> implements As
         NewSymbol declarationSymbol = newSymbolTable.newSymbol(declaration.start().line(),
             declaration.start().lineOffset(), declaration.end().line(), declaration.end().lineOffset());
         for (LinebasedTextRange reference : references) {
-          declarationSymbol.newReference(reference.start().line(), reference.start().lineOffset(),
-              reference.end().line(), reference.end().lineOffset());
+          try {
+            declarationSymbol.newReference(reference.start().line(), reference.start().lineOffset(),
+                reference.end().line(), reference.end().lineOffset());
+          } catch (Exception e) {
+            LOG.debug("Couldn't add a symbol reference because of {}", CxxUtils.getStackTrace(e));
+          }
         }
       }
 
       newSymbolTable.save();
 
     } catch (EclipseCDTException e) {
-      LOG.warn("EclipseCDT failure:" + CxxUtils.getStackTrace(e));
+      LOG.warn("EclipseCDT failure: " + CxxUtils.getStackTrace(e));
     } catch (Exception e) {
-      LOG.warn("Generic exception:" + CxxUtils.getStackTrace(e));
+      LOG.warn("Generic exception: " + CxxUtils.getStackTrace(e));
     }
   }
 
