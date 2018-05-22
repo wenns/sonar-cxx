@@ -165,4 +165,18 @@ public class EclipseCDTParserTest {
     assertThat(actualFullDump).isEqualTo(new String(Files.readAllBytes(expectedReferences.toPath()), "UTF-8"));
   }
 
+  @Test
+  public void testErrorRecovery() throws EclipseCDTException, IOException {
+    File baseDir = TestUtils.loadResource("/org/sonar/cxx/eclipsecdt");
+    File target = new File(baseDir, "syntaxerror.cc");
+
+    File expectedReferences = new File(baseDir, "syntaxerror_references.txt");
+    EclipseCDTParser parser = new EclipseCDTParser(target.getAbsolutePath(), new String[0]);
+    Map<LinebasedTextRange, Set<LinebasedTextRange>> table = parser.generateSymbolTable();
+
+    String actualFullDump = dumpSymbolTable(target, table);
+
+    assertThat(actualFullDump).isEqualTo(new String(Files.readAllBytes(expectedReferences.toPath()), "UTF-8"));
+  }
+
 }
