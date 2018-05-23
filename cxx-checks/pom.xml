@@ -64,25 +64,45 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>wagon-maven-plugin</artifactId>
-        <version>2.0.0</version>
+        <groupId>com.googlecode.maven-download-plugin</groupId>
+        <artifactId>download-maven-plugin</artifactId>
+        <version>1.4.0</version>
         <executions>
           <execution>
-            <id>upload-javadoc</id>
+            <id>download-eclipse-cdt-core</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>download-single</goal>
+              <goal>wget</goal>
             </goals>
             <configuration>
-              <url>http://ftp.halifax.rwth-aachen.de/eclipse/tools/cdt/releases/9.4/cdt-9.4.3/plugins/</url>
-              <fromFile>org.eclipse.cdt.core_6.4.0.201802261533.jar</fromFile>
-              <toDir>${java.io.tmpdir}</toDir>
+              <url>https://ftp.halifax.rwth-aachen.de/eclipse/tools/cdt/releases/9.4/cdt-9.4.3/plugins/org.eclipse.cdt.core_6.4.0.201802261533.jar</url>
+              <outputFileName>org.eclipse.cdt.core_6.4.0.201802261533.jar</outputFileName>
+              <outputDirectory>${java.io.tmpdir}</outputDirectory>
+              <md5>d784a4563f2e94ebb63c8eec94e73c82</md5>
             </configuration>
           </execution>
         </executions>
       </plugin>
-
+      <plugin>
+        <groupId>com.googlecode.maven-download-plugin</groupId>
+        <artifactId>download-maven-plugin</artifactId>
+        <version>1.4.0</version>
+        <executions>
+          <execution>
+            <id>download-eclipse-cdt-core-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>wget</goal>
+            </goals>
+            <configuration>
+              <url>https://ftp.halifax.rwth-aachen.de/eclipse/tools/cdt/releases/9.4/cdt-9.4.3/plugins/org.eclipse.cdt.core.source_6.4.0.201802261533.jar</url>
+              <outputFileName>org.eclipse.cdt.core.source_6.4.0.201802261533.jar</outputFileName>
+              <outputDirectory>${java.io.tmpdir}</outputDirectory>
+              <md5>55583f2c1016c273eb888a4e341a766e</md5>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
@@ -93,12 +113,14 @@
           <version>6.4.0</version>
           <packaging>jar</packaging>
           <file>${java.io.tmpdir}/org.eclipse.cdt.core_6.4.0.201802261533.jar</file>
+          <sources>${java.io.tmpdir}/org.eclipse.cdt.core.source_6.4.0.201802261533.jar</sources>
           <generatePom>true</generatePom>
           <localRepositoryPath>${java.io.tmpdir}/sonar-cxx-local-maven/</localRepositoryPath>
+          <createChecksum>true</createChecksum>
         </configuration>
         <executions>
           <execution>
-            <id>install-jar-lib</id>
+            <id>install-eclipse-cdt-core</id>
             <goals>
               <goal>install-file</goal>
             </goals>

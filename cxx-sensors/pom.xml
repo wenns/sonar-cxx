@@ -18,8 +18,8 @@
   <!-- see cxx-checks/pom.xml -->
   <repositories>
     <repository>
-    <id>sonar-cxx-local-maven</id>
-    <url>file://${java.io.tmpdir}/sonar-cxx-local-maven/</url>
+      <id>sonar-cxx-local-maven</id>
+      <url>file://${java.io.tmpdir}/sonar-cxx-local-maven/</url>
     </repository>
   </repositories>
 
