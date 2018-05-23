@@ -39,12 +39,11 @@ import org.sonar.cxx.sensors.eclipsecdt.LinebasedTextRange;
 import org.sonar.cxx.sensors.utils.CxxUtils;
 import org.sonar.squidbridge.SquidAstVisitor;
 
-import com.sonar.sslr.api.AstAndTokenVisitor;
 import com.sonar.sslr.api.AstNode;
+import com.sonar.sslr.api.AstVisitor;
 import com.sonar.sslr.api.Grammar;
-import com.sonar.sslr.api.Token;
 
-public class CxxEclipseCDTVisitor extends SquidAstVisitor<Grammar> implements AstAndTokenVisitor {
+public class CxxEclipseCDTVisitor extends SquidAstVisitor<Grammar> implements AstVisitor {
 
   private static final Logger LOG = Loggers.get(CxxEclipseCDTVisitor.class);
 
@@ -106,10 +105,6 @@ public class CxxEclipseCDTVisitor extends SquidAstVisitor<Grammar> implements As
     } catch (Exception e) {
       LOG.warn("Generic exception: " + CxxUtils.getStackTrace(e));
     }
-  }
-
-  @Override
-  public void visitToken(Token token) {
   }
 
 }
