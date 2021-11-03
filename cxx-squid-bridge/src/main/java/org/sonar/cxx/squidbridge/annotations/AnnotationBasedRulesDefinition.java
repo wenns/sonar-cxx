@@ -44,15 +44,11 @@ import org.sonar.cxx.squidbridge.rules.ExternalDescriptionLoader;
 /**
  * Utility class which helps setting up an implementation of {@link RulesDefinition} with a list of
  * rule classes annotated with {@link Rule}, {@link RuleProperty} and SQALE annotations:
- * <ul>
- * <li>{@link SqaleSubCharacteristic}</li>
- * <li>Exactly one of:
+ * Exactly one of:
  * <ul>
  * <li>{@link SqaleConstantRemediation}</li>
  * <li>{@link SqaleLinearRemediation}</li>
  * <li>{@link SqaleLinearWithOffsetRemediation}</li>
- * </ul>
- * </li>
  * </ul>
  * Names and descriptions are also retrieved based on the legacy SonarQube conventions:
  * <ul>
@@ -109,7 +105,10 @@ public class AnnotationBasedRulesDefinition {
   }
 
   private boolean isSqaleAnnotated(Class<?> ruleClass) {
-    return getNoSqaleAnnotation(ruleClass) != null;
+    return AnnotationUtils.getAnnotation(ruleClass, SqaleConstantRemediation.class) != null ||
+           AnnotationUtils.getAnnotation(ruleClass, SqaleLinearRemediation.class) != null ||
+           AnnotationUtils.getAnnotation(ruleClass, SqaleLinearWithOffsetRemediation.class) != null ||
+           getNoSqaleAnnotation(ruleClass) != null;
   }
 
   @VisibleForTesting
