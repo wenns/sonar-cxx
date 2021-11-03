@@ -190,7 +190,6 @@ public class AnnotationBasedRulesDefinitionTest {
   public void class_with_sqale_constant_remediation() throws Exception {
 
     @Rule(key = "key1", name = "name1", description = "description1")
-    @SqaleSubCharacteristic(SubCharacteristics.CPU_EFFICIENCY)
     @SqaleConstantRemediation("10min")
     class RuleClass {
     }
@@ -203,7 +202,6 @@ public class AnnotationBasedRulesDefinitionTest {
   public void class_with_sqale_linear_remediation() throws Exception {
 
     @Rule(key = "key1", name = "name1", description = "description1")
-    @SqaleSubCharacteristic(SubCharacteristics.CPU_EFFICIENCY)
     @SqaleLinearRemediation(coeff = "2h", effortToFixDescription = "Effort to test one uncovered condition")
     class RuleClass {
     }
@@ -216,7 +214,6 @@ public class AnnotationBasedRulesDefinitionTest {
   public void class_with_sqale_linear_with_offset_remediation() throws Exception {
 
     @Rule(key = "key1", name = "name1", description = "description1")
-    @SqaleSubCharacteristic(SubCharacteristics.CPU_EFFICIENCY)
     @SqaleLinearWithOffsetRemediation(coeff = "5min", offset = "1h",
                                       effortToFixDescription = "Effort to test one uncovered condition")
     class RuleClass {
@@ -229,7 +226,6 @@ public class AnnotationBasedRulesDefinitionTest {
   @Test
   public void class_with_several_sqale_remediation_annotations() throws Exception {
     @Rule(key = "key1", name = "name1", description = "description1")
-    @SqaleSubCharacteristic(SubCharacteristics.CPU_EFFICIENCY)
     @SqaleConstantRemediation("10min")
     @SqaleLinearRemediation(coeff = "2h", effortToFixDescription = "Effort to test one uncovered condition")
     class RuleClass {
@@ -242,7 +238,6 @@ public class AnnotationBasedRulesDefinitionTest {
   @Test
   public void invalid_sqale_annotation() throws Exception {
     @Rule(key = "key1", name = "name1", description = "description1")
-    @SqaleSubCharacteristic(SubCharacteristics.CPU_EFFICIENCY)
     @SqaleConstantRemediation("xxx")
     class MyInvalidRuleClass {
     }
@@ -275,7 +270,6 @@ public class AnnotationBasedRulesDefinitionTest {
   @Test
   public void load_method_with_class_with_sqale_annotations() throws Exception {
     @Rule(key = "key1", name = "name1", description = "description1")
-    @SqaleSubCharacteristic(SubCharacteristics.CPU_EFFICIENCY)
     @SqaleConstantRemediation("10min")
     class RuleClass {
     }

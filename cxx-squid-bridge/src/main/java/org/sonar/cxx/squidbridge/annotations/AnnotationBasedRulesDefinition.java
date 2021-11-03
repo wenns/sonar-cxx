@@ -109,7 +109,7 @@ public class AnnotationBasedRulesDefinition {
   }
 
   private boolean isSqaleAnnotated(Class<?> ruleClass) {
-    return getSqaleSubCharAnnotation(ruleClass) != null || getNoSqaleAnnotation(ruleClass) != null;
+    return getNoSqaleAnnotation(ruleClass) != null;
   }
 
   @VisibleForTesting
@@ -157,11 +157,6 @@ public class AnnotationBasedRulesDefinition {
   }
 
   private void setupSqaleModel(NewRule rule, Class<?> ruleClass) {
-    SqaleSubCharacteristic subChar = getSqaleSubCharAnnotation(ruleClass);
-    if (subChar != null) {
-      rule.setDebtSubCharacteristic(subChar.value());
-    }
-
     var constant = AnnotationUtils.getAnnotation(ruleClass, SqaleConstantRemediation.class);
     var linear = AnnotationUtils.getAnnotation(ruleClass, SqaleLinearRemediation.class);
     var linearWithOffset = AnnotationUtils.getAnnotation(ruleClass, SqaleLinearWithOffsetRemediation.class);
@@ -183,10 +178,6 @@ public class AnnotationBasedRulesDefinition {
         rule.debtRemediationFunctions().linearWithOffset(linearWithOffset.coeff(), linearWithOffset.offset()));
       rule.setEffortToFixDescription(linearWithOffset.effortToFixDescription());
     }
-  }
-
-  private SqaleSubCharacteristic getSqaleSubCharAnnotation(Class<?> ruleClass) {
-    return AnnotationUtils.getAnnotation(ruleClass, SqaleSubCharacteristic.class);
   }
 
   private NoSqale getNoSqaleAnnotation(Class<?> ruleClass) {
