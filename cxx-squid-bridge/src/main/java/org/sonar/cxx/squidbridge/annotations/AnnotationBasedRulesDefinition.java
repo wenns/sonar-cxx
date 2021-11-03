@@ -171,12 +171,12 @@ public class AnnotationBasedRulesDefinition {
     }
     if (linear != null) {
       rule.setDebtRemediationFunction(rule.debtRemediationFunctions().linear(linear.coeff()));
-      rule.setEffortToFixDescription(linear.effortToFixDescription());
+      rule.setGapDescription(linear.effortToFixDescription());
     }
     if (linearWithOffset != null) {
       rule.setDebtRemediationFunction(
         rule.debtRemediationFunctions().linearWithOffset(linearWithOffset.coeff(), linearWithOffset.offset()));
-      rule.setEffortToFixDescription(linearWithOffset.effortToFixDescription());
+      rule.setGapDescription(linearWithOffset.effortToFixDescription());
     }
   }
 
